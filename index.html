@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>বলের ল্যাব — পঞ্চম শ্রেণির সিমুলেশন</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F2F6FB; --surface:#FFFFFF; --surface2:#EAF1F9; --ink:#15233A; --muted:#55667E; --line:#D5E0EC;
+  --navy:#1F3A5F; --teal:#2A9D8F; --blue:#3A86FF; --orange:#F3722C; --pink:#E5487F; --yellow:#FFC43D; --purple:#7B4FD6;
+  --sky:#E3F0FD; --ground:#9BC47A; --ground2:#7FAE5E; --soil:#B98B5E; --skin:#F1C29A; --wood:#C98A4B; --wood2:#A86D35;
+  --stone:#8E99A8; --water:#5DADE2; --rope:#8A6A45; --onAccent:#FFFFFF; --think:#FFF4D1;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1828; --surface:#16243A; --surface2:#1D2E48; --ink:#EAF1FA; --muted:#A3B3C8; --line:#2B3D59;
+    --navy:#9CC2F2; --sky:#14263F; --ground:#4F7A3A; --ground2:#3F6530; --soil:#6E5038; --wood:#B97B40; --wood2:#8E5A2A;
+    --stone:#7D8899; --water:#2F7FB3; --rope:#C9A27A; --think:#3A3120;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1828; --surface:#16243A; --surface2:#1D2E48; --ink:#EAF1FA; --muted:#A3B3C8; --line:#2B3D59;
+  --navy:#9CC2F2; --sky:#14263F; --ground:#4F7A3A; --ground2:#3F6530; --soil:#6E5038; --wood:#B97B40; --wood2:#8E5A2A;
+  --stone:#7D8899; --water:#2F7FB3; --rope:#C9A27A; --think:#3A3120;
+  color-scheme: dark;
+}
+:root{ box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px); }
+*,*::before,*::after{ box-sizing:inherit; }
+[hidden]{ display:none !important; }
+html{ scroll-padding-top:env(safe-area-inset-top,0px); }
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"Hind Siliguri","Noto Sans Bengali","Nirmala UI","Vrinda",system-ui,sans-serif;
+  font-size:17px; line-height:1.55;
+}
+.wrap{ max-width:1180px; margin:0 auto; padding:18px 18px 40px; }
+header.top{ display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:10px 24px; margin-bottom:14px; }
+header.top h1{ margin:0; font-size:clamp(28px,4vw,40px); line-height:1.15; color:var(--navy); font-weight:700; }
+header.top p{ margin:2px 0 0; color:var(--muted); }
+.stem-dots{ display:flex; gap:6px; }
+.stem-dots span{ width:34px; height:34px; border-radius:50%; display:grid; place-items:center; color:var(--onAccent); font-weight:700; font-family:system-ui,sans-serif; font-size:15px; }
+
+nav.tabs{ display:flex; gap:8px; overflow-x:auto; padding:4px 2px 10px; scrollbar-width:thin; }
+nav.tabs button{
+  flex:0 0 auto; border:2px solid var(--line); background:var(--surface); color:var(--ink);
+  font:inherit; font-weight:600; font-size:16px; padding:8px 14px; border-radius:999px; cursor:pointer;
+  display:flex; align-items:center; gap:8px;
+}
+nav.tabs button .em{ font-size:20px; line-height:1; }
+nav.tabs button[aria-selected="true"]{ background:var(--navy); border-color:var(--navy); color:var(--bg); }
+button:focus-visible, input:focus-visible, select:focus-visible{ outline:3px solid var(--yellow); outline-offset:2px; }
+
+.sim{ display:none; }
+.sim.active{ display:block; }
+.sim-head{ display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 14px; margin:6px 0 12px; }
+.sim-head h2{ margin:0; font-size:clamp(22px,3vw,28px); color:var(--navy); }
+.sim-head p{ margin:0; color:var(--muted); }
+.lab{ display:grid; grid-template-columns:minmax(0,1fr) 330px; gap:16px; align-items:start; }
+@media (max-width:900px){ .lab{ grid-template-columns:1fr; } }
+.stage{ background:var(--surface); border:1px solid var(--line); border-radius:18px; overflow:hidden; }
+.stage svg{ display:block; width:100%; height:auto; touch-action:manipulation; }
+.readouts{ display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); border-top:1px solid var(--line); overflow:hidden; }
+.readouts div{ background:var(--surface); padding:8px 12px; box-shadow:1px 1px 0 var(--line); }
+.readouts small{ display:block; color:var(--muted); font-size:13px; line-height:1.3; }
+.readouts b{ font-size:19px; }
+.status{ padding:10px 14px; font-weight:600; border-top:1px solid var(--line); min-height:48px; }
+.status.good{ color:var(--teal); }
+.status.warn{ color:var(--orange); }
+
+.panel{ background:var(--surface); border:1px solid var(--line); border-radius:18px; padding:14px 16px; display:flex; flex-direction:column; gap:14px; }
+.ctl label, .ctl .lbl{ display:block; font-weight:600; margin-bottom:6px; }
+.ctl .hint{ color:var(--muted); font-size:14px; }
+.stepper{ display:flex; align-items:center; gap:10px; }
+.stepper button{ width:44px; height:44px; border-radius:12px; border:2px solid var(--line); background:var(--surface2); color:var(--ink); font-size:24px; font-weight:700; cursor:pointer; line-height:1; }
+.stepper output{ min-width:70px; text-align:center; font-size:20px; font-weight:700; }
+.seg{ display:flex; flex-wrap:wrap; gap:6px; }
+.seg button{ flex:1 1 auto; border:2px solid var(--line); background:var(--surface2); color:var(--ink); font:inherit; font-size:15px; font-weight:600; padding:7px 10px; border-radius:12px; cursor:pointer; }
+.seg button[aria-pressed="true"]{ background:var(--teal); border-color:var(--teal); color:var(--onAccent); }
+input[type=range]{ width:100%; accent-color:var(--orange); height:28px; }
+.range-row{ display:flex; justify-content:space-between; color:var(--muted); font-size:13px; }
+.btns{ display:flex; flex-wrap:wrap; gap:8px; }
+.btn{ border:none; font:inherit; font-weight:700; font-size:17px; padding:10px 18px; border-radius:14px; cursor:pointer; background:var(--orange); color:var(--onAccent); }
+.btn.alt{ background:var(--surface2); color:var(--ink); border:2px solid var(--line); }
+.btn:disabled{ opacity:.45; cursor:not-allowed; }
+.check{ display:flex; align-items:center; gap:8px; font-weight:600; cursor:pointer; }
+.check input{ width:22px; height:22px; accent-color:var(--teal); }
+
+.bars{ display:flex; flex-direction:column; gap:8px; }
+.bar{ display:grid; grid-template-columns:110px 1fr 56px; align-items:center; gap:8px; font-size:14px; }
+.bar .track{ height:16px; background:var(--surface2); border-radius:8px; overflow:hidden; }
+.bar .fill{ height:100%; width:0; border-radius:8px; transition:width .2s; }
+.bar b{ text-align:right; }
+
+.think{ margin-top:16px; background:var(--think); border-radius:16px; padding:12px 16px; display:flex; gap:12px; align-items:flex-start; }
+.think .q{ flex:0 0 40px; height:40px; border-radius:50%; background:var(--yellow); color:#1F3A5F; display:grid; place-items:center; font-weight:700; font-size:22px; }
+.think p{ margin:0; }
+.think .ans{ margin-top:6px; color:var(--teal); font-weight:600; }
+.think .ans[hidden]{ display:none; }
+.think button{ margin-top:8px; border:2px solid var(--line); background:var(--surface); color:var(--ink); font:inherit; font-weight:600; font-size:15px; padding:4px 12px; border-radius:10px; cursor:pointer; }
+
+select.sel{ width:100%; font:inherit; font-size:16px; padding:8px 10px; border-radius:12px; border:2px solid var(--line); background:var(--surface2); color:var(--ink); }
+table.results{ width:100%; border-collapse:collapse; font-size:15px; }
+table.results th, table.results td{ text-align:left; padding:4px 6px; border-bottom:1px solid var(--line); }
+table.results th{ color:var(--muted); font-weight:600; font-size:13px; }
+.results-wrap{ overflow-x:auto; }
+.empty{ color:var(--muted); font-size:14px; margin:0; }
+
+svg text{ font-family:"Hind Siliguri","Noto Sans Bengali","Nirmala UI",sans-serif; }
+@media (prefers-reduced-motion: reduce){ .bar .fill{ transition:none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>বলের ল্যাব</h1>
+      <p>পঞ্চম শ্রেণি, প্রাথমিক বিজ্ঞান, অধ্যায় ৭: বলের ধারণা</p>
+    </div>
+    <div class="stem-dots" aria-label="STEM">
+      <span style="background:var(--teal)">S</span><span style="background:var(--blue)">T</span><span style="background:var(--orange)">E</span><span style="background:var(--pink)">M</span>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="সিমুলেশন বেছে নাও">
+    <button role="tab" data-view="tug"><span class="em">🪢</span>দড়ি টানাটানি</button>
+    <button role="tab" data-view="friction"><span class="em">⚽</span>ঘর্ষণ</button>
+    <button role="tab" data-view="lever"><span class="em">⚖️</span>লিভার</button>
+    <button role="tab" data-view="ramp"><span class="em">📐</span>হেলানো সমতল</button>
+    <button role="tab" data-view="gravity"><span class="em">🍎</span>মাধ্যাকর্ষণ</button>
+    <button role="tab" data-view="pulley"><span class="em">🪣</span>কপিকল</button>
+  </nav>
+
+  <!-- ================= TUG ================= -->
+  <section class="sim" id="sim-tug" role="tabpanel">
+    <div class="sim-head"><h2>দড়ি টানাটানি: কোন দল জিতবে?</h2><p>দুই দলে মানুষ বাড়াও-কমাও, তারপর চালু করো।</p></div>
+    <div class="lab">
+      <div class="stage">
+        <svg id="tug-svg" viewBox="0 0 800 400" role="img" aria-label="দড়ি টানাটানির দৃশ্য"></svg>
+        <div class="readouts">
+          <div><small>বাঁ দলের বল</small><b id="tug-lf">০</b></div>
+          <div><small>ডান দলের বল</small><b id="tug-rf">০</b></div>
+          <div><small>মোট বল</small><b id="tug-net">০</b></div>
+        </div>
+        <div class="status" id="tug-status">মানুষ যোগ করে “চালু করো” চাপো।</div>
+      </div>
+      <div class="panel">
+        <div class="ctl"><span class="lbl">বাঁ দলের মানুষ</span>
+          <div class="stepper"><button data-act="l-" aria-label="বাঁ দলে একজন কমাও">−</button><output id="tug-l">০ জন</output><button data-act="l+" aria-label="বাঁ দলে একজন বাড়াও">+</button></div></div>
+        <div class="ctl"><span class="lbl">ডান দলের মানুষ</span>
+          <div class="stepper"><button data-act="r-" aria-label="ডান দলে একজন কমাও">−</button><output id="tug-r">০ জন</output><button data-act="r+" aria-label="ডান দলে একজন বাড়াও">+</button></div></div>
+        <div class="ctl"><span class="lbl">কী টানবে?</span>
+          <div class="seg" id="tug-box"><button data-box="light" aria-pressed="false">হালকা বাক্স</button><button data-box="heavy" aria-pressed="true">ভারী টেবিল</button></div>
+          <p class="hint">প্রত্যেক মানুষের বল ৫০ একক। ভারী টেবিল নড়াতে ৯০ এককের বেশি বল লাগে।</p></div>
+        <div class="btns"><button class="btn" id="tug-go">চালু করো</button><button class="btn alt" id="tug-reset">আবার শুরু</button></div>
+      </div>
+    </div>
+    <div class="think"><div class="q">?</div><div><p>ভারী টেবিলে ১ জন টানলে নড়ে না কেন? দুই দলে ৩ জন করে থাকলে কী হয়?</p>
+      <button class="reveal">উত্তর দেখো</button><p class="ans" hidden>১ জনের বল (৫০) ঘর্ষণের বাধার (৯০) চেয়ে কম, তাই টেবিল নড়ে না। দুই দলের বল সমান হলে মোট বল শূন্য, তাই টেবিল যেখানে ছিল সেখানেই থাকে।</p></div></div>
+  </section>
+
+  <!-- ================= FRICTION ================= -->
+  <section class="sim" id="sim-friction" role="tabpanel">
+    <div class="sim-head"><h2>ঘর্ষণ: বল কোথায় বেশি দূর যায়?</h2><p>জায়গা আর লাথির জোর বেছে বল গড়িয়ে দাও, দূরত্ব মেপে দেখো।</p></div>
+    <div class="lab">
+      <div class="stage">
+        <svg id="fr-svg" viewBox="0 0 800 300" role="img" aria-label="বল গড়ানোর পথ"></svg>
+        <div class="readouts">
+          <div><small>জায়গা</small><b id="fr-surf">মসৃণ মেঝে</b></div>
+          <div><small>লাথির জোর</small><b id="fr-pow">৫</b></div>
+          <div><small>দূরত্ব</small><b id="fr-dist">০ মিটার</b></div>
+        </div>
+        <div class="status" id="fr-status">জায়গা বেছে “লাথি দাও” চাপো।</div>
+      </div>
+      <div class="panel">
+        <div class="ctl"><span class="lbl">কোথায় গড়াবে?</span>
+          <div class="seg" id="fr-seg">
+            <button data-s="ice" aria-pressed="false">বরফ</button><button data-s="floor" aria-pressed="true">মসৃণ মেঝে</button>
+            <button data-s="carpet" aria-pressed="false">কার্পেট</button><button data-s="grass" aria-pressed="false">ঘাসের মাঠ</button></div></div>
+        <div class="ctl"><label for="fr-power">লাথির জোর</label>
+          <input type="range" id="fr-power" min="1" max="10" step="1" value="5">
+          <div class="range-row"><span>আস্তে</span><span>জোরে</span></div></div>
+        <div class="btns"><button class="btn" id="fr-kick">লাথি দাও</button><button class="btn alt" id="fr-back">বল ফিরিয়ে আনো</button></div>
+        <div class="ctl"><span class="lbl">ফলাফলের খাতা</span>
+          <div class="results-wrap"><table class="results"><thead><tr><th>নং</th><th>জায়গা</th><th>জোর</th><th>দূরত্ব</th></tr></thead><tbody id="fr-body"></tbody></table></div>
+          <p class="empty" id="fr-empty">এখনো কোনো মাপ নেই।</p>
+          <div class="btns" style="margin-top:8px"><button class="btn alt" id="fr-clear">খাতা মুছে ফেলো</button></div></div>
+      </div>
+    </div>
+    <div class="think"><div class="q">?</div><div><p>একই জোরে লাথি দিলে মসৃণ মেঝে আর ঘাসের মাঠে দূরত্বের পার্থক্য কত? ঘাসে বল তাড়াতাড়ি থামে কেন?</p>
+      <button class="reveal">উত্তর দেখো</button><p class="ans" hidden>জোর ৫ হলে মেঝেতে প্রায় ৭.৫ মিটার, ঘাসে প্রায় ২.৫ মিটার, পার্থক্য ৫ মিটার। ঘাস অমসৃণ, তাই ঘর্ষণ বল বেশি। ঘর্ষণ গতির উল্টো দিকে কাজ করে বলকে থামিয়ে দেয়।</p></div></div>
+  </section>
+
+  <!-- ================= LEVER ================= -->
+  <section class="sim" id="sim-lever" role="tabpanel">
+    <div class="sim-head"><h2>লিভার: কম জোরে ভারী পাথর তোলো</h2><p>ভিত্তি (পেনসিল) সরিয়ে দেখো কখন পাথর তোলা সহজ হয়।</p></div>
+    <div class="lab">
+      <div class="stage">
+        <svg id="lv-svg" viewBox="0 0 800 400" role="img" aria-label="লিভারের দৃশ্য"></svg>
+        <div class="readouts" id="lv-readA">
+          <div><small>পাথরের ভার</small><b>৬০ একক</b></div>
+          <div><small>দরকারি বল</small><b id="lv-need">৬০ একক</b></div>
+          <div><small>তোমার আঙুলের বল</small><b id="lv-fing">৪০ একক</b></div>
+        </div>
+        <div class="readouts" id="lv-readB" hidden>
+          <div><small>বাঁ দিক: ভার × ঘর</small><b id="lv-tl">২ × ২ = ৪</b></div>
+          <div><small>ডান দিক: ভার × ঘর</small><b id="lv-tr">১ × ৪ = ৪</b></div>
+        </div>
+        <div class="status" id="lv-status"></div>
+      </div>
+      <div class="panel">
+        <div class="ctl"><span class="lbl">খেলা বেছে নাও</span>
+          <div class="seg" id="lv-mode"><button data-m="lift" aria-pressed="true">পাথর তোলো</button><button data-m="bal" aria-pressed="false">ভারসাম্য খেলা</button></div></div>
+        <div id="lv-ctlA" style="display:flex;flex-direction:column;gap:14px">
+          <div class="ctl"><label for="lv-f">ভিত্তি কোথায়? (স্কেলের <span id="lv-fval">১৫</span> সেমি দাগে)</label>
+            <input type="range" id="lv-f" min="3" max="27" step="1" value="15">
+            <div class="range-row"><span>আঙুলের কাছে</span><span>পাথরের কাছে</span></div></div>
+          <div class="ctl"><label for="lv-p">আঙুল দিয়ে কত জোরে চাপবে?</label>
+            <input type="range" id="lv-p" min="0" max="100" step="5" value="40">
+            <div class="range-row"><span>আস্তে</span><span>জোরে</span></div></div>
+          <div class="bars">
+            <div class="bar"><span>দরকারি বল</span><div class="track"><div class="fill" id="lv-bneed" style="background:var(--pink)"></div></div><b id="lv-bneedv"></b></div>
+            <div class="bar"><span>আঙুলের বল</span><div class="track"><div class="fill" id="lv-bfing" style="background:var(--blue)"></div></div><b id="lv-bfingv"></b></div>
+          </div>
+        </div>
+        <div id="lv-ctlB" hidden style="flex-direction:column;gap:14px">
+          <div class="ctl"><span class="lbl">বাঁ দিকে বাক্স</span><div class="stepper"><button data-b="m1-" aria-label="কমাও">−</button><output id="lv-m1"></output><button data-b="m1+" aria-label="বাড়াও">+</button></div></div>
+          <div class="ctl"><span class="lbl">বাঁ দিকের ঘর (মাঝখান থেকে)</span><div class="stepper"><button data-b="d1-" aria-label="কাছে আনো">−</button><output id="lv-d1"></output><button data-b="d1+" aria-label="দূরে নাও">+</button></div></div>
+          <div class="ctl"><span class="lbl">ডান দিকে বাক্স</span><div class="stepper"><button data-b="m2-" aria-label="কমাও">−</button><output id="lv-m2"></output><button data-b="m2+" aria-label="বাড়াও">+</button></div></div>
+          <div class="ctl"><span class="lbl">ডান দিকের ঘর (মাঝখান থেকে)</span><div class="stepper"><button data-b="d2-" aria-label="কাছে আনো">−</button><output id="lv-d2"></output><button data-b="d2+" aria-label="দূরে নাও">+</button></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="think"><div class="q">?</div><div><p>ভিত্তি পাথরের কাছে আনলে কম জোরে পাথর ওঠে কেন? ভারসাম্য খেলায় ২টি বাক্স ২ ঘরে রাখলে ডান দিকে ১টি বাক্স কোথায় রাখবে?</p>
+      <button class="reveal">উত্তর দেখো</button><p class="ans" hidden>ভিত্তি পাথরের কাছে থাকলে আঙুলের দিকের হাতল লম্বা হয়, লম্বা হাতলে কম বলেই ভার ওঠে। ২ × ২ = ৪, তাই ১টি বাক্স ৪ নম্বর ঘরে রাখলে ১ × ৪ = ৪, ভারসাম্য হবে।</p></div></div>
+  </section>
+
+  <!-- ================= RAMP ================= -->
+  <section class="sim" id="sim-ramp" role="tabpanel">
+    <div class="sim-head"><h2>হেলানো সমতল: ঢাল দিয়ে বাক্স তোলো</h2><p>ঢাল কম খাড়া করলে বল কমে, কিন্তু পথ লম্বা হয়।</p></div>
+    <div class="lab">
+      <div class="stage">
+        <svg id="rp-svg" viewBox="0 0 800 400" role="img" aria-label="হেলানো সমতলের দৃশ্য"></svg>
+        <div class="readouts">
+          <div><small>ঢালের কোণ</small><b id="rp-ang"></b></div>
+          <div><small>ঢালের দৈর্ঘ্য (পথ)</small><b id="rp-len"></b></div>
+          <div><small>দরকারি বল</small><b id="rp-f"></b></div>
+          <div><small>বল × পথ</small><b id="rp-w"></b></div>
+        </div>
+        <div class="status" id="rp-status">“ঠেলে তোলো” চাপো।</div>
+      </div>
+      <div class="panel">
+        <div class="ctl"><label for="rp-a">ঢাল কতটা খাড়া?</label>
+          <input type="range" id="rp-a" min="18" max="75" step="1" value="30">
+          <div class="range-row"><span>কম খাড়া</span><span>বেশি খাড়া</span></div></div>
+        <div class="btns"><button class="btn" id="rp-go">ঠেলে তোলো</button><button class="btn alt" id="rp-reset">নিচে নামাও</button></div>
+        <div class="ctl"><span class="lbl">সরাসরি তোলা বনাম ঢাল</span>
+          <div class="bars">
+            <div class="bar"><span>বল: সরাসরি</span><div class="track"><div class="fill" style="background:var(--pink);width:100%"></div></div><b>১০০</b></div>
+            <div class="bar"><span>বল: ঢালে</span><div class="track"><div class="fill" id="rp-bf" style="background:var(--teal)"></div></div><b id="rp-bfv"></b></div>
+            <div class="bar"><span>পথ: সরাসরি</span><div class="track"><div class="fill" id="rp-bd0" style="background:var(--pink)"></div></div><b>১ মি</b></div>
+            <div class="bar"><span>পথ: ঢালে</span><div class="track"><div class="fill" id="rp-bd" style="background:var(--blue)"></div></div><b id="rp-bdv"></b></div>
+          </div>
+          <p class="hint">বাক্সের ভার ১০০ একক, মঞ্চের উচ্চতা ১ মিটার।</p></div>
+      </div>
+    </div>
+    <div class="think"><div class="q">?</div><div><p>ঢাল কম খাড়া করলে কী বাড়ে আর কী কমে? হাসপাতালে হুইলচেয়ারের র‍্যাম্প কম খাড়া রাখা হয় কেন?</p>
+      <button class="reveal">উত্তর দেখো</button><p class="ans" hidden>ঢাল কম খাড়া হলে দরকারি বল কমে, কিন্তু পথ লম্বা হয়। বল × পথ প্রায় একই থাকে। কম খাড়া র‍্যাম্পে কম বলে ধীরে ধীরে হুইলচেয়ার ঠেলে তোলা যায়।</p></div></div>
+  </section>
+
+  <!-- ================= GRAVITY ================= -->
+  <section class="sim" id="sim-gravity" role="tabpanel">
+    <div class="sim-head"><h2>মাধ্যাকর্ষণ: সব জিনিস নিচে পড়ে কেন?</h2><p>দুটি জিনিস বেছে একসাথে ২ মিটার উঁচু থেকে ছেড়ে দাও।</p></div>
+    <div class="lab">
+      <div class="stage">
+        <svg id="gv-svg" viewBox="0 0 800 460" role="img" aria-label="জিনিস পড়ার দৃশ্য"></svg>
+        <div class="readouts">
+          <div><small id="gv-n1">বাঁ পাশের জিনিস</small><b id="gv-t1">০.০০ সেকেন্ড</b></div>
+          <div><small id="gv-n2">ডান পাশের জিনিস</small><b id="gv-t2">০.০০ সেকেন্ড</b></div>
+        </div>
+        <div class="status" id="gv-status">“একসাথে ছেড়ে দাও” চাপো।</div>
+      </div>
+      <div class="panel">
+        <div class="ctl"><label for="gv-o1">বাঁ পাশে কী থাকবে?</label><select id="gv-o1" class="sel"></select></div>
+        <div class="ctl"><label for="gv-o2">ডান পাশে কী থাকবে?</label><select id="gv-o2" class="sel"></select></div>
+        <label class="check"><input type="checkbox" id="gv-slow"> ধীর গতিতে দেখো (স্লো-মোশন)</label>
+        <div class="btns"><button class="btn" id="gv-drop">একসাথে ছেড়ে দাও</button><button class="btn alt" id="gv-reset">আবার উপরে তোলো</button></div>
+      </div>
+    </div>
+    <div class="think"><div class="q">?</div><div><p>খোলা কাগজ আর দলা পাকানো কাগজ একসাথে ছাড়লে কোনটা আগে পড়ে? সবকিছু উপরে না গিয়ে নিচে পড়ে কেন?</p>
+      <button class="reveal">উত্তর দেখো</button><p class="ans" hidden>দলা পাকানো কাগজ আগে পড়ে, কারণ খোলা কাগজ বাতাসে বেশি বাধা পায়। কিন্তু দুটোই নিচে পড়ে, কারণ পৃথিবী সব বস্তুকে নিজের কেন্দ্রের দিকে টানে। এই টানই মাধ্যাকর্ষণ বল।</p></div></div>
+  </section>
+
+  <!-- ================= PULLEY ================= -->
+  <section class="sim" id="sim-pulley" role="tabpanel">
+    <div class="sim-head"><h2>কপিকল: কুয়া থেকে পানি তোলো</h2><p>কপিকল ছাড়া, এক চাকা আর দুই চাকার কপিকলে তুলনা করো।</p></div>
+    <div class="lab">
+      <div class="stage">
+        <svg id="pl-svg" viewBox="0 0 800 460" role="img" aria-label="কুয়া ও কপিকলের দৃশ্য"></svg>
+        <div class="readouts">
+          <div><small>বালতির ভার</small><b>৮০ একক</b></div>
+          <div><small>তোমার দরকারি বল</small><b id="pl-f"></b></div>
+          <div><small>দড়ি টানতে হয়েছে</small><b id="pl-rope"></b></div>
+          <div><small>বালতি উঠেছে</small><b id="pl-h"></b></div>
+        </div>
+        <div class="status" id="pl-status"></div>
+      </div>
+      <div class="panel">
+        <div class="ctl"><span class="lbl">কীভাবে তুলবে?</span>
+          <div class="seg" id="pl-mode"><button data-m="0" aria-pressed="false">কপিকল ছাড়া</button><button data-m="1" aria-pressed="true">এক চাকা</button><button data-m="2" aria-pressed="false">দুই চাকা</button></div></div>
+        <div class="ctl"><label for="pl-pull">দড়ি টানো</label>
+          <input type="range" id="pl-pull" min="0" max="100" step="1" value="0">
+          <div class="range-row"><span>বালতি পানিতে</span><span>বালতি উপরে</span></div></div>
+        <div class="btns"><button class="btn" id="pl-go">ধীরে ধীরে তোলো</button><button class="btn alt" id="pl-down">নিচে নামাও</button></div>
+      </div>
+    </div>
+    <div class="think"><div class="q">?</div><div><p>এক চাকার কপিকলে বল একই লাগে, তবু কাজ সহজ হয় কেন? দুই চাকায় বল অর্ধেক লাগে, কিন্তু কী বেশি করতে হয়?</p>
+      <button class="reveal">উত্তর দেখো</button><p class="ans" hidden>এক চাকার কপিকলে উপরে না টেনে নিচের দিকে টানা যায়, তাই নিজের শরীরের ভারও কাজে লাগে, কাজ সহজ হয়। দুই চাকায় বল অর্ধেক লাগে, কিন্তু দুই গুণ লম্বা দড়ি টানতে হয়।</p></div></div>
+  </section>
+</div>
+
+<script>
+(function(){
+"use strict";
+var NS = "http://www.w3.org/2000/svg";
+function S(tag, attrs, parent){
+  var e = document.createElementNS(NS, tag);
+  if (attrs) for (var k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function $(sel){ return document.querySelector(sel); }
+var BN = "০১২৩৪৫৬৭৮৯";
+function bn(v, d){
+  var s = (typeof v === "number") ? v.toFixed(d || 0) : String(v);
+  if (s === "-0" || /^-0\.0*$/.test(s)) s = s.slice(1);
+  return s.replace(/[0-9]/g, function(c){ return BN[+c]; }).replace("-", "−");
+}
+function clamp(x, a, b){ return Math.max(a, Math.min(b, x)); }
+function setPressed(group, btn){
+  group.querySelectorAll("button").forEach(function(b){ b.setAttribute("aria-pressed", b === btn ? "true" : "false"); });
+}
+function setStatus(el, text, kind){ el.textContent = text; el.className = "status" + (kind ? " " + kind : ""); }
+
+// simple child figure; feet at (0,0); lean: -1 leans left, 1 leans right
+function kid(parent, color, lean, armTo){
+  var g = S("g", null, parent);
+  var hx = lean * 10, hy = -86;
+  S("line", { x1: -8, y1: 0, x2: lean * 2, y2: -34, stroke: "var(--navy)", "stroke-width": 8, "stroke-linecap": "round" }, g);
+  S("line", { x1: 8, y1: 0, x2: lean * 2, y2: -34, stroke: "var(--navy)", "stroke-width": 8, "stroke-linecap": "round" }, g);
+  S("line", { x1: lean * 2, y1: -34, x2: hx * 0.8, y2: -70, stroke: color, "stroke-width": 14, "stroke-linecap": "round" }, g);
+  var arm = S("line", { x1: hx * 0.8, y1: -64, x2: armTo[0], y2: armTo[1], stroke: "var(--skin)", "stroke-width": 6, "stroke-linecap": "round" }, g);
+  S("circle", { cx: hx, cy: hy, r: 12, fill: "var(--skin)" }, g);
+  S("path", { d: "M" + (hx - 12) + " " + (hy - 2) + " a12 12 0 0 1 24 0 z", fill: "#3B2A20" }, g);
+  g.arm = arm;
+  return g;
+}
+function arrowPath(x1, y, x2, h){
+  // horizontal arrow from x1 to x2 (head at x2)
+  var dir = x2 >= x1 ? 1 : -1, len = Math.abs(x2 - x1);
+  if (len < 2) return "";
+  var head = Math.min(18, len);
+  var hx = x2 - dir * head, t = h / 2;
+  return "M" + x1 + " " + (y - t) + " L" + hx + " " + (y - t) + " L" + hx + " " + (y - t - 7) +
+    " L" + x2 + " " + y + " L" + hx + " " + (y + t + 7) + " L" + hx + " " + (y + t) + " L" + x1 + " " + (y + t) + " Z";
+}
+function vArrowPath(x, y1, y2, w){
+  var dir = y2 >= y1 ? 1 : -1, len = Math.abs(y2 - y1);
+  if (len < 2) return "";
+  var head = Math.min(16, len), hy = y2 - dir * head, t = w / 2;
+  return "M" + (x - t) + " " + y1 + " L" + (x - t) + " " + hy + " L" + (x - t - 7) + " " + hy +
+    " L" + x + " " + y2 + " L" + (x + t + 7) + " " + hy + " L" + (x + t) + " " + hy + " L" + (x + t) + " " + y1 + " Z";
+}
+
+var sims = {};
+
+/* =================== 1. TUG OF WAR =================== */
+sims.tug = (function(){
+  var svg = $("#tug-svg"), GY = 300, PER = 50, SCALE = 0.55, LIMIT = 120;
+  var BOX = { light: { m: 20, st: 30, kin: 24, name: "বাক্স" }, heavy: { m: 60, st: 90, kin: 72, name: "টেবিল" } };
+  var st = { L: 0, R: 0, box: "heavy", x: 0, v: 0, running: false, done: false };
+
+  S("rect", { x: 0, y: 0, width: 800, height: GY, fill: "var(--sky)" }, svg);
+  S("rect", { x: 0, y: GY, width: 800, height: 100, fill: "var(--ground)" }, svg);
+  S("line", { x1: 400, y1: GY, x2: 400, y2: 400, stroke: "var(--surface)", "stroke-width": 3, "stroke-dasharray": "8 8" }, svg);
+  var midT = S("text", { x: 410, y: GY + 22, "font-size": 14, fill: "var(--ink)" }, svg);
+  midT.textContent = "মাঝের দাগ: প্রথম জন এই দাগ পেরোলে অন্য দল জিতবে";
+  var netArrow = S("path", { fill: "var(--purple)" }, svg);
+  var netLbl = S("text", { x: 400, y: GY + 84, "text-anchor": "middle", "font-size": 16, "font-weight": 700, fill: "var(--ink)" }, svg);
+
+  var world = S("g", null, svg);
+  var ropeL = S("line", { y1: GY - 48, y2: GY - 48, stroke: "var(--rope)", "stroke-width": 5, "stroke-linecap": "round" }, world);
+  var ropeR = S("line", { y1: GY - 48, y2: GY - 48, stroke: "var(--rope)", "stroke-width": 5, "stroke-linecap": "round" }, world);
+  var boxG = S("g", null, world);
+  var lights = S("g", null, boxG), heavy = S("g", null, boxG);
+  S("rect", { x: 352, y: GY - 80, width: 96, height: 80, rx: 6, fill: "var(--yellow)", stroke: "var(--wood2)", "stroke-width": 3 }, lights);
+  S("line", { x1: 352, y1: GY - 40, x2: 448, y2: GY - 40, stroke: "var(--wood2)", "stroke-width": 3 }, lights);
+  S("rect", { x: 335, y: GY - 96, width: 130, height: 18, rx: 4, fill: "var(--wood)" }, heavy);
+  S("rect", { x: 345, y: GY - 80, width: 16, height: 80, fill: "var(--wood2)" }, heavy);
+  S("rect", { x: 439, y: GY - 80, width: 16, height: 80, fill: "var(--wood2)" }, heavy);
+  S("rect", { x: 361, y: GY - 78, width: 78, height: 30, fill: "var(--wood)" }, heavy);
+  var boxLbl = S("text", { x: 400, y: GY - 108, "text-anchor": "middle", "font-size": 17, "font-weight": 700, fill: "var(--ink)" }, boxG);
+  var kidsL = [], kidsR = [], i;
+  for (i = 0; i < 4; i++){
+    var kx = 400 - 65 - 55 - i * 48;
+    var gl = kid(world, "var(--blue)", -1, [22, -50]); gl.setAttribute("transform", "translate(" + kx + "," + GY + ")"); kidsL.push(gl);
+    var rx = 400 + 65 + 55 + i * 48;
+    var gr = kid(world, "var(--orange)", 1, [-22, -50]); gr.setAttribute("transform", "translate(" + rx + "," + GY + ")"); kidsR.push(gr);
+  }
+  var fArrows = S("g", null, svg);
+  var arL = S("path", { fill: "var(--blue)" }, fArrows), arR = S("path", { fill: "var(--orange)" }, fArrows);
+  var lblL = S("text", { "text-anchor": "end", "font-size": 15, "font-weight": 700, fill: "var(--blue)" }, fArrows);
+  var lblR = S("text", { "text-anchor": "start", "font-size": 15, "font-weight": 700, fill: "var(--orange)" }, fArrows);
+
+  var statusEl = $("#tug-status"), goBtn = $("#tug-go");
+
+  function draw(){
+    var b = BOX[st.box], half = st.box === "heavy" ? 65 : 48;
+    lights.style.display = st.box === "light" ? "" : "none";
+    heavy.style.display = st.box === "heavy" ? "" : "none";
+    boxLbl.textContent = b.name;
+    world.setAttribute("transform", "translate(" + st.x + ",0)");
+    kidsL.forEach(function(k, j){ k.style.display = j < st.L ? "" : "none"; });
+    kidsR.forEach(function(k, j){ k.style.display = j < st.R ? "" : "none"; });
+    var lEnd = 400 - 65 - 55 - (st.L - 1) * 48 + 22, rEnd = 400 + 65 + 55 + (st.R - 1) * 48 - 22;
+    ropeL.setAttribute("x1", 400 - half); ropeL.setAttribute("x2", st.L ? lEnd - 6 : 400 - half);
+    ropeR.setAttribute("x1", 400 + half); ropeR.setAttribute("x2", st.R ? rEnd + 6 : 400 + half);
+    var cx = 400 + st.x, lf = st.L * PER, rf = st.R * PER, ay = GY - 150;
+    arL.setAttribute("d", arrowPath(cx - 4, ay, cx - 4 - lf * SCALE, 12));
+    arR.setAttribute("d", arrowPath(cx + 4, ay, cx + 4 + rf * SCALE, 12));
+    lblL.setAttribute("x", cx - 10 - lf * SCALE - 6); lblL.setAttribute("y", ay + 5); lblL.textContent = lf ? bn(lf) : "";
+    lblR.setAttribute("x", cx + 10 + rf * SCALE + 6); lblR.setAttribute("y", ay + 5); lblR.textContent = rf ? bn(rf) : "";
+    var net = rf - lf;
+    netArrow.setAttribute("d", net ? arrowPath(400, GY + 48, 400 + net * SCALE, 10) : "");
+    netLbl.textContent = net ? "মোট বল " + bn(Math.abs(net)) + (net > 0 ? " (ডানে)" : " (বাঁয়ে)") : "মোট বল শূন্য";
+    $("#tug-l").textContent = bn(st.L) + " জন";
+    $("#tug-r").textContent = bn(st.R) + " জন";
+    $("#tug-lf").textContent = bn(lf) + " একক";
+    $("#tug-rf").textContent = bn(rf) + " একক";
+    $("#tug-net").textContent = net === 0 ? "০" : bn(Math.abs(net)) + (net > 0 ? " → ডানে" : " ← বাঁয়ে");
+  }
+  function explain(){
+    var b = BOX[st.box], net = (st.R - st.L) * PER;
+    if (st.done) return;
+    if (!st.running){ setStatus(statusEl, "মানুষ যোগ করে “চালু করো” চাপো।"); return; }
+    if (st.L === 0 && st.R === 0) setStatus(statusEl, "কেউ টানছে না, তাই " + b.name + " নড়ছে না।", "warn");
+    else if (net === 0 && st.v === 0) setStatus(statusEl, "দুই দলের বল সমান! মোট বল শূন্য, তাই " + b.name + " নড়ছে না।", "warn");
+    else if (st.v === 0) setStatus(statusEl, "মোট বল (" + bn(Math.abs(net)) + ") ঘর্ষণের বাধার (" + bn(b.st) + ") চেয়ে কম, তাই " + b.name + " নড়ছে না। আরও মানুষ লাগবে!", "warn");
+    else setStatus(statusEl, b.name + " " + (st.v > 0 ? "ডান" : "বাঁ") + " দিকে নড়ছে! বেশি বল যেদিকে, বস্তু সেদিকে যায়।", "good");
+  }
+  function tick(dt){
+    if (!st.running || st.done) return;
+    var b = BOX[st.box], net = (st.R - st.L) * PER;
+    if (st.v === 0){
+      if (Math.abs(net) > b.st){ st.v = Math.sign(net) * 0.001; }
+    }
+    if (st.v !== 0){
+      var a = (net - b.kin * Math.sign(st.v)) / b.m * 30;
+      var nv = st.v + a * dt;
+      if (Math.sign(nv) !== Math.sign(st.v)) nv = 0;
+      st.v = clamp(nv, -220, 220);
+      st.x += st.v * dt;
+      if (Math.abs(st.x) >= LIMIT){
+        st.x = Math.sign(st.x) * LIMIT; st.v = 0; st.done = true; st.running = false;
+        goBtn.textContent = "চালু করো"; goBtn.disabled = true;
+        setStatus(statusEl, (st.x > 0 ? "ডান" : "বাঁ") + " দল জিতেছে! তাদের বল বেশি ছিল। “আবার শুরু” চাপো।", "good");
+      }
+    }
+    draw(); explain();
+  }
+  function reset(){
+    st.x = 0; st.v = 0; st.running = false; st.done = false;
+    goBtn.disabled = false; goBtn.textContent = "চালু করো";
+    draw(); explain();
+  }
+  document.querySelectorAll("#sim-tug .stepper button").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var a = btn.getAttribute("data-act");
+      if (a === "l-") st.L = Math.max(0, st.L - 1);
+      if (a === "l+") st.L = Math.min(4, st.L + 1);
+      if (a === "r-") st.R = Math.max(0, st.R - 1);
+      if (a === "r+") st.R = Math.min(4, st.R + 1);
+      draw(); explain();
+    });
+  });
+  document.querySelectorAll("#tug-box button").forEach(function(btn){
+    btn.addEventListener("click", function(){ st.box = btn.getAttribute("data-box"); setPressed($("#tug-box"), btn); reset(); });
+  });
+  goBtn.addEventListener("click", function(){
+    if (st.done) return;
+    st.running = !st.running;
+    if (!st.running) st.v = 0;
+    goBtn.textContent = st.running ? "থামাও" : "চালু করো";
+    draw(); explain();
+  });
+  $("#tug-reset").addEventListener("click", reset);
+  reset();
+  return { tick: tick };
+})();
+
+/* =================== 2. FRICTION =================== */
+sims.friction = (function(){
+  var svg = $("#fr-svg"), X0 = 70, PXM = 34, TOP = 170, R = 16;
+  var SURF = {
+    ice:    { name: "বরফ",       dmax: 19, a: 0.8, fill: "#CDEBFA", color: "#3A86FF" },
+    floor:  { name: "মসৃণ মেঝে", dmax: 15, a: 1.4, fill: "#E9DCC6", color: "#2A9D8F" },
+    carpet: { name: "কার্পেট",    dmax: 9,  a: 2.4, fill: "#C95C6B", color: "#7B4FD6" },
+    grass:  { name: "ঘাসের মাঠ", dmax: 5,  a: 3.5, fill: "#6FAE4E", color: "#F3722C" }
+  };
+  var st = { s: "floor", pow: 5, x: 0, v: 0, rolling: false, kickT: -1, results: [], n: 0 };
+  S("rect", { x: 0, y: 0, width: 800, height: TOP, fill: "var(--sky)" }, svg);
+  var surfRect = S("rect", { x: 0, y: TOP, width: 800, height: 46 }, svg);
+  var decor = S("g", null, svg);
+  S("rect", { x: 0, y: TOP + 46, width: 800, height: 84, fill: "var(--surface)" }, svg);
+  var ruler = S("g", null, svg);
+  for (var m = 0; m <= 20; m++){
+    var x = X0 + m * PXM;
+    S("line", { x1: x, y1: TOP + 50, x2: x, y2: TOP + (m % 2 ? 60 : 68), stroke: "var(--ink)", "stroke-width": 2 }, ruler);
+    if (m % 2 === 0){ var t = S("text", { x: x, y: TOP + 88, "text-anchor": "middle", "font-size": 15, fill: "var(--ink)" }, ruler); t.textContent = bn(m); }
+  }
+  var unit = S("text", { x: X0 + 20 * PXM, y: TOP + 112, "text-anchor": "end", "font-size": 14, fill: "var(--muted)" }, ruler); unit.textContent = "মিটার";
+  var markers = S("g", null, svg);
+  var leg = S("g", null, svg);
+  S("line", { x1: 0, y1: 0, x2: 0, y2: 70, stroke: "var(--navy)", "stroke-width": 12, "stroke-linecap": "round" }, leg);
+  S("path", { d: "M-8 62 L20 62 Q30 66 26 76 L-8 76 Z", fill: "var(--pink)" }, leg);
+  var ball = S("g", null, svg);
+  S("circle", { cx: 0, cy: 0, r: R, fill: "#FFFFFF", stroke: "#1F3A5F", "stroke-width": 2 }, ball);
+  var spin = S("g", null, ball);
+  S("polygon", { points: "0,-6 6,-2 4,5 -4,5 -6,-2", fill: "#1F3A5F" }, spin);
+  S("line", { x1: 0, y1: -6, x2: 0, y2: -16, stroke: "#1F3A5F", "stroke-width": 2 }, spin);
+  S("line", { x1: 6, y1: -2, x2: 15, y2: -5, stroke: "#1F3A5F", "stroke-width": 2 }, spin);
+  S("line", { x1: -6, y1: -2, x2: -15, y2: -5, stroke: "#1F3A5F", "stroke-width": 2 }, spin);
+  var distLbl = S("text", { "text-anchor": "middle", "font-size": 16, "font-weight": 700, fill: "var(--ink)" }, svg);
+
+  var statusEl = $("#fr-status"), kickBtn = $("#fr-kick");
+
+  function drawSurface(){
+    var s = SURF[st.s];
+    surfRect.setAttribute("fill", s.fill);
+    while (decor.firstChild) decor.removeChild(decor.firstChild);
+    var i;
+    if (st.s === "grass"){
+      for (i = 0; i < 110; i++){ var gx = i * 7.3 + (i % 3) * 2; S("path", { d: "M" + gx + " " + TOP + " l3 -11 l3 11", fill: "#4C8A33" }, decor); }
+    } else if (st.s === "carpet"){
+      for (i = 0; i < 160; i++){ S("circle", { cx: (i * 37) % 800 + 4, cy: TOP + 6 + (i * 13) % 36, r: 2, fill: "#A7404F" }, decor); }
+    } else if (st.s === "floor"){
+      for (i = 0; i < 14; i++){ S("line", { x1: i * 60, y1: TOP, x2: i * 60, y2: TOP + 46, stroke: "#CDBB9C", "stroke-width": 2 }, decor); }
+    } else {
+      for (i = 0; i < 9; i++){ S("line", { x1: i * 95 + 20, y1: TOP + 10, x2: i * 95 + 60, y2: TOP + 10, stroke: "#FFFFFF", "stroke-width": 3, "stroke-linecap": "round", opacity: 0.8 }, decor); }
+    }
+  }
+  function draw(){
+    var bx = X0 + st.x * PXM;
+    ball.setAttribute("transform", "translate(" + bx + "," + (TOP - R) + ")");
+    spin.setAttribute("transform", "rotate(" + (st.x * PXM / R * 57.3) + ")");
+    var ang = 0;
+    if (st.kickT >= 0){ var k = st.kickT / 0.25; ang = k < 0.5 ? -40 + k * 2 * 70 : 30 - (k - 0.5) * 2 * 30; }
+    else ang = -10;
+    leg.setAttribute("transform", "translate(" + (X0 - 34) + "," + (TOP - 76) + ") rotate(" + ang + ")");
+    distLbl.setAttribute("x", bx); distLbl.setAttribute("y", TOP - 44);
+    distLbl.textContent = st.x > 0.05 ? bn(st.x, 1) + " মি" : "";
+    $("#fr-surf").textContent = SURF[st.s].name;
+    $("#fr-pow").textContent = bn(st.pow);
+    $("#fr-dist").textContent = bn(st.x, 1) + " মিটার";
+  }
+  function drawMarkers(){
+    while (markers.firstChild) markers.removeChild(markers.firstChild);
+    st.results.forEach(function(r, idx){
+      var x = X0 + r.d * PXM, c = SURF[r.s].color;
+      S("line", { x1: x, y1: 18 + idx * 4, x2: x, y2: TOP, stroke: c, "stroke-width": 3, "stroke-dasharray": "5 4" }, markers);
+      S("circle", { cx: x, cy: 16 + idx * 4, r: 10, fill: c }, markers);
+      var t = S("text", { x: x, y: 21 + idx * 4, "text-anchor": "middle", "font-size": 12, "font-weight": 700, fill: "#FFFFFF" }, markers); t.textContent = bn(r.n);
+    });
+  }
+  function drawTable(){
+    var body = $("#fr-body"); body.innerHTML = "";
+    st.results.forEach(function(r){
+      var tr = document.createElement("tr");
+      tr.innerHTML = "<td><span style=\"display:inline-block;width:10px;height:10px;border-radius:50%;background:" + SURF[r.s].color + ";margin-right:6px\"></span>" + bn(r.n) + "</td><td>" + SURF[r.s].name + "</td><td>" + bn(r.p) + "</td><td>" + bn(r.d, 1) + " মি</td>";
+      body.appendChild(tr);
+    });
+    $("#fr-empty").style.display = st.results.length ? "none" : "";
+  }
+  function back(){
+    st.x = 0; st.v = 0; st.rolling = false; st.kickT = -1; kickBtn.disabled = false; draw();
+    setStatus(statusEl, "জায়গা বেছে “লাথি দাও” চাপো।");
+  }
+  function kick(){
+    if (st.rolling) return;
+    var s = SURF[st.s];
+    st.x = 0; st.target = s.dmax * st.pow / 10;
+    st.v = Math.sqrt(2 * s.a * st.target);
+    st.rolling = true; st.kickT = 0; kickBtn.disabled = true;
+    setStatus(statusEl, SURF[st.s].name + "-এ বল গড়াচ্ছে…");
+  }
+  function tick(dt){
+    if (st.kickT >= 0){ st.kickT += dt; if (st.kickT > 0.25) st.kickT = -1; }
+    if (st.rolling){
+      var s = SURF[st.s];
+      st.v -= s.a * dt;
+      if (st.v <= 0){
+        st.v = 0; st.x = st.target; st.rolling = false; kickBtn.disabled = false;
+        st.n += 1;
+        st.results.unshift({ n: st.n, s: st.s, p: st.pow, d: st.target });
+        if (st.results.length > 6) st.results.pop();
+        drawMarkers(); drawTable();
+        var msg = "থেমে গেছে! " + s.name + "-এ বল " + bn(st.target, 1) + " মিটার গেছে। ";
+        msg += st.s === "grass" || st.s === "carpet" ? "এখানে ঘর্ষণ বেশি, তাই বল তাড়াতাড়ি থামল।" : "এখানে ঘর্ষণ কম, তাই বল অনেক দূর গেল।";
+        setStatus(statusEl, msg, "good");
+      } else {
+        st.x = Math.min(st.target, st.x + st.v * dt);
+      }
+    }
+    draw();
+  }
+  document.querySelectorAll("#fr-seg button").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      if (st.rolling) return;
+      st.s = btn.getAttribute("data-s"); setPressed($("#fr-seg"), btn); drawSurface(); back();
+    });
+  });
+  $("#fr-power").addEventListener("input", function(e){ st.pow = +e.target.value; draw(); });
+  kickBtn.addEventListener("click", kick);
+  $("#fr-back").addEventListener("click", back);
+  $("#fr-clear").addEventListener("click", function(){ st.results = []; st.n = 0; drawMarkers(); drawTable(); });
+  drawSurface(); drawTable(); back();
+  return { tick: tick };
+})();
+
+/* =================== 3. LEVER =================== */
+sims.lever = (function(){
+  var svg = $("#lv-svg"), PY = 300, GROUND = 360, W = 60;
+  var st = { mode: "lift", f: 15, p: 40, ang: 0, m1: 2, d1: 2, m2: 1, d2: 4 };
+  S("rect", { x: 0, y: 0, width: 800, height: GROUND, fill: "var(--sky)" }, svg);
+  S("rect", { x: 0, y: GROUND, width: 800, height: 40, fill: "var(--soil)" }, svg);
+  var fulcrum = S("polygon", { fill: "var(--teal)" }, svg);
+  var fulLbl = S("text", { "text-anchor": "middle", "font-size": 15, "font-weight": 700, fill: "#FFFFFF" }, svg);
+  var plank = S("g", null, svg);
+  // mode A content
+  var gA = S("g", null, plank);
+  S("rect", { x: 100, y: PY - 10, width: 600, height: 10, rx: 3, fill: "var(--orange)" }, gA);
+  for (var c = 0; c <= 30; c += 5){
+    S("line", { x1: 100 + c * 20, y1: PY - 10, x2: 100 + c * 20, y2: PY - 3, stroke: "#FFFFFF", "stroke-width": 2 }, gA);
+    if (c > 0 && c < 30){ var tt = S("text", { x: 100 + c * 20, y: PY + 18, "text-anchor": "middle", "font-size": 13, fill: "var(--ink)" }, gA); tt.textContent = bn(c); }
+  }
+  S("path", { d: "M650 " + (PY - 10) + " q-6 -40 22 -44 q34 -4 30 22 q-2 22 -4 22 z", fill: "var(--stone)", stroke: "#5D6675", "stroke-width": 2 }, gA);
+  var stoneLbl = S("text", { x: 676, y: PY - 26, "text-anchor": "middle", "font-size": 13, "font-weight": 700, fill: "#FFFFFF" }, gA); stoneLbl.textContent = "পাথর";
+  var finger = S("path", { fill: "var(--blue)" }, gA);
+  var fingerLbl = S("text", { x: 112, y: PY - 128, "text-anchor": "middle", "font-size": 26 }, gA); fingerLbl.textContent = "👇";
+  // mode B content
+  var gB = S("g", null, plank);
+  S("rect", { x: 100, y: PY - 10, width: 600, height: 10, rx: 3, fill: "var(--wood)" }, gB);
+  var boxesB = S("g", null, gB);
+  for (var d = 1; d <= 4; d++){
+    [-1, 1].forEach(function(side){
+      var x = 400 + side * d * 70;
+      S("circle", { cx: x, cy: PY - 5, r: 4, fill: "var(--navy)" }, gB);
+      var t = S("text", { x: x, y: PY + 20, "text-anchor": "middle", "font-size": 14, fill: "var(--ink)" }, gB); t.textContent = bn(d);
+    });
+  }
+  var statusEl = $("#lv-status");
+
+  function need(){ return W * (30 - st.f) / st.f; }
+  function target(){
+    var px = st.mode === "lift" ? 100 + st.f * 20 : 400;
+    var leftLen = px - 100, rightLen = 700 - px, h = GROUND - PY;
+    var leftDown = -Math.min(22, Math.asin(Math.min(1, h / leftLen)) * 57.3);
+    var rightDown = Math.min(22, Math.asin(Math.min(1, h / rightLen)) * 57.3);
+    if (st.mode === "lift") return st.p >= need() - 1e-9 ? leftDown : rightDown;
+    var diff = st.m2 * st.d2 - st.m1 * st.d1;
+    return diff === 0 ? 0 : (diff > 0 ? rightDown : leftDown);
+  }
+  function drawBoxesB(){
+    while (boxesB.firstChild) boxesB.removeChild(boxesB.firstChild);
+    [[-1, st.m1, st.d1, "var(--blue)"], [1, st.m2, st.d2, "var(--pink)"]].forEach(function(s){
+      var x = 400 + s[0] * s[2] * 70;
+      for (var k = 0; k < s[1]; k++){
+        S("rect", { x: x - 20, y: PY - 10 - 32 * (k + 1), width: 40, height: 30, rx: 4, fill: s[3], stroke: "var(--surface)", "stroke-width": 2 }, boxesB);
+      }
+    });
+  }
+  function update(){
+    var px = st.mode === "lift" ? 100 + st.f * 20 : 400;
+    fulcrum.setAttribute("points", px + "," + PY + " " + (px - 38) + "," + GROUND + " " + (px + 38) + "," + GROUND);
+    fulLbl.setAttribute("x", px); fulLbl.setAttribute("y", GROUND - 10);
+    fulLbl.textContent = st.mode === "lift" ? "ভিত্তি" : "";
+    gA.style.display = st.mode === "lift" ? "" : "none";
+    gB.style.display = st.mode === "bal" ? "" : "none";
+    $("#lv-readA").hidden = st.mode !== "lift";
+    $("#lv-readB").hidden = st.mode !== "bal";
+    $("#lv-ctlA").style.display = st.mode === "lift" ? "flex" : "none";
+    var cb = $("#lv-ctlB"); cb.hidden = st.mode !== "bal"; cb.style.display = st.mode === "bal" ? "flex" : "none";
+    if (st.mode === "lift"){
+      var n = need();
+      finger.setAttribute("d", st.p > 0 ? vArrowPath(112, PY - 110, PY - 14, 6 + st.p / 6) : "");
+      $("#lv-fval").textContent = bn(st.f);
+      $("#lv-need").textContent = bn(n, n < 10 ? 1 : 0) + " একক";
+      $("#lv-fing").textContent = bn(st.p) + " একক";
+      $("#lv-bneed").style.width = clamp(n / 200 * 100, 1, 100) + "%";
+      $("#lv-bfing").style.width = clamp(st.p / 200 * 100, 0, 100) + "%";
+      $("#lv-bneedv").textContent = n > 200 ? "২০০+" : bn(n, n < 10 ? 1 : 0);
+      $("#lv-bfingv").textContent = bn(st.p);
+      if (st.p >= n - 1e-9) setStatus(statusEl, "পাথর উঠেছে! আঙুলের দিকে হাতল " + bn(st.f) + " সেমি, পাথরের দিকে " + bn(30 - st.f) + " সেমি।", "good");
+      else if (n > 100) setStatus(statusEl, "অনেক জোর লাগবে! ভিত্তিটা পাথরের দিকে সরিয়ে দেখো।", "warn");
+      else setStatus(statusEl, "আরও " + bn(Math.ceil(n - st.p)) + " একক জোর লাগবে। জোর বাড়াও অথবা ভিত্তি পাথরের দিকে সরাও।", "warn");
+    } else {
+      drawBoxesB();
+      var tl = st.m1 * st.d1, tr = st.m2 * st.d2;
+      $("#lv-m1").textContent = bn(st.m1) + "টি"; $("#lv-m2").textContent = bn(st.m2) + "টি";
+      $("#lv-d1").textContent = bn(st.d1) + " নং"; $("#lv-d2").textContent = bn(st.d2) + " নং";
+      $("#lv-tl").textContent = bn(st.m1) + " × " + bn(st.d1) + " = " + bn(tl);
+      $("#lv-tr").textContent = bn(st.m2) + " × " + bn(st.d2) + " = " + bn(tr);
+      if (tl === tr) setStatus(statusEl, "ভারসাম্য! দুই দিকের ভার × ঘর সমান (" + bn(tl) + ")।", "good");
+      else setStatus(statusEl, (tl > tr ? "বাঁ" : "ডান") + " দিক নিচে নামছে। ভার × ঘর সমান করার চেষ্টা করো!", "warn");
+    }
+  }
+  function tick(dt){
+    var px = st.mode === "lift" ? 100 + st.f * 20 : 400;
+    var t = target();
+    st.ang += (t - st.ang) * Math.min(1, dt * 6);
+    plank.setAttribute("transform", "rotate(" + st.ang.toFixed(2) + " " + px + " " + PY + ")");
+  }
+  document.querySelectorAll("#lv-mode button").forEach(function(btn){
+    btn.addEventListener("click", function(){ st.mode = btn.getAttribute("data-m"); setPressed($("#lv-mode"), btn); update(); });
+  });
+  $("#lv-f").addEventListener("input", function(e){ st.f = +e.target.value; update(); });
+  $("#lv-p").addEventListener("input", function(e){ st.p = +e.target.value; update(); });
+  document.querySelectorAll("#lv-ctlB button").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var a = btn.getAttribute("data-b"), key = a.slice(0, 2), delta = a[2] === "+" ? 1 : -1;
+      st[key] = clamp(st[key] + delta, 1, 4); update();
+    });
+  });
+  update();
+  return { tick: tick };
+})();
+
+/* =================== 4. RAMP =================== */
+sims.ramp = (function(){
+  var svg = $("#rp-svg"), GY = 340, H = 160, PX = 600;
+  var st = { a: 30, s: 0, moving: false, top: false };
+  S("rect", { x: 0, y: 0, width: 800, height: GY, fill: "var(--sky)" }, svg);
+  S("rect", { x: 0, y: GY, width: 800, height: 60, fill: "var(--ground)" }, svg);
+  S("rect", { x: PX, y: GY - H, width: 170, height: H, fill: "var(--navy)" }, svg);
+  var pl = S("text", { x: PX + 85, y: GY - H / 2 + 6, "text-anchor": "middle", "font-size": 16, "font-weight": 700, fill: "var(--bg)" }, svg); pl.textContent = "মঞ্চ (১ মিটার উঁচু)";
+  var ramp = S("polygon", { fill: "var(--wood)", stroke: "var(--wood2)", "stroke-width": 2 }, svg);
+  var angArc = S("path", { fill: "none", stroke: "var(--ink)", "stroke-width": 2 }, svg);
+  var angTxt = S("text", { "font-size": 15, "font-weight": 700, fill: "var(--ink)" }, svg);
+  var person = kid(svg, "var(--teal)", 1, [24, -58]);
+  var boxG = S("g", null, svg);
+  S("rect", { x: -22, y: -44, width: 44, height: 44, rx: 4, fill: "var(--yellow)", stroke: "var(--wood2)", "stroke-width": 3 }, boxG);
+  S("line", { x1: -22, y1: -22, x2: 22, y2: -22, stroke: "var(--wood2)", "stroke-width": 2 }, boxG);
+  var arrow = S("path", { fill: "var(--orange)" }, svg);
+  var statusEl = $("#rp-status"), goBtn = $("#rp-go");
+
+  function geo(){
+    var th = st.a * Math.PI / 180, run = H / Math.tan(th);
+    return { th: th, sx: PX - run, run: run, L: 1 / Math.sin(th) };
+  }
+  function draw(){
+    var g = geo();
+    ramp.setAttribute("points", g.sx + "," + GY + " " + PX + "," + (GY - H) + " " + PX + "," + GY);
+    var r = 44;
+    angArc.setAttribute("d", "M" + (g.sx + r) + " " + GY + " A" + r + " " + r + " 0 0 0 " + (g.sx + r * Math.cos(g.th)) + " " + (GY - r * Math.sin(g.th)));
+    angTxt.setAttribute("x", g.sx + r + 8); angTxt.setAttribute("y", GY - 8); angTxt.textContent = bn(st.a) + "°";
+    var deg = st.a;
+    if (st.top){
+      boxG.setAttribute("transform", "translate(" + (PX + 60) + "," + (GY - H) + ")");
+    } else {
+      var bx = g.sx + st.s * g.run, by = GY - st.s * H;
+      // centre the box base on the slope, nudged up-slope so it never pokes below the ground
+      var off = 24, cx = bx + off * Math.cos(g.th), cy = by - off * Math.sin(g.th);
+      boxG.setAttribute("transform", "translate(" + cx + "," + cy + ") rotate(" + (-deg) + ")");
+    }
+    var ps = Math.max(0, st.top ? 1 : st.s) , pxp = g.sx + ps * g.run, pyp = GY - ps * H;
+    var back = 26;
+    var fx = pxp - back * Math.cos(g.th), fy = pyp + back * Math.sin(g.th);
+    if (fy > GY){ fx = fx - (fy - GY) / Math.tan(g.th) * 0; fy = GY; }
+    person.setAttribute("transform", "translate(" + fx + "," + fy + ")");
+    person.style.display = st.top ? "none" : "";
+    if (!st.top){
+      var ax = g.sx + st.s * g.run + 60 * Math.cos(g.th), ay = GY - st.s * H - 60 * Math.sin(g.th) - 30;
+      var F = 100 * Math.sin(g.th), len = 20 + F * 0.7;
+      var ex = ax + len * Math.cos(g.th), ey = ay - len * Math.sin(g.th);
+      var nx = Math.sin(g.th), ny = Math.cos(g.th), w = 5, hd = 14;
+      var bxh = ex - hd * Math.cos(g.th), byh = ey + hd * Math.sin(g.th);
+      arrow.setAttribute("d", "M" + (ax - nx * w) + " " + (ay - ny * w) + " L" + (bxh - nx * w) + " " + (byh - ny * w) + " L" + (bxh - nx * 12) + " " + (byh - ny * 12) +
+        " L" + ex + " " + ey + " L" + (bxh + nx * 12) + " " + (byh + ny * 12) + " L" + (bxh + nx * w) + " " + (byh + ny * w) + " L" + (ax + nx * w) + " " + (ay + ny * w) + " Z");
+    } else arrow.setAttribute("d", "");
+    var Fv = Math.round(100 * Math.sin(g.th));
+    $("#rp-ang").textContent = bn(st.a) + "°";
+    $("#rp-len").textContent = bn(g.L, 2) + " মিটার";
+    $("#rp-f").textContent = bn(Fv) + " একক";
+    $("#rp-w").textContent = bn(Fv) + " × " + bn(g.L, 2) + " ≈ " + bn(Fv * g.L, 0);
+    $("#rp-bf").style.width = Fv + "%"; $("#rp-bfv").textContent = bn(Fv);
+    var maxL = 1 / Math.sin(18 * Math.PI / 180);
+    $("#rp-bd0").style.width = (1 / maxL * 100) + "%";
+    $("#rp-bd").style.width = (g.L / maxL * 100) + "%"; $("#rp-bdv").textContent = bn(g.L, 1) + " মি";
+  }
+  function reset(){
+    st.s = 0; st.moving = false; st.top = false; goBtn.disabled = false; draw();
+    setStatus(statusEl, "“ঠেলে তোলো” চাপো। ঢাল বদলে আবার চেষ্টা করো।");
+  }
+  function tick(dt){
+    if (!st.moving) return;
+    var g = geo();
+    st.s += dt * 0.55 / g.L;
+    if (st.s >= 1){
+      st.s = 1; st.moving = false; st.top = true; goBtn.disabled = true;
+      var Fv = Math.round(100 * Math.sin(g.th));
+      setStatus(statusEl, "বাক্স মঞ্চে উঠেছে! সরাসরি তুলতে ১০০ একক বল লাগত, ঢালে লেগেছে মাত্র " + bn(Fv) + " একক, কিন্তু পথ ছিল " + bn(g.L, 2) + " মিটার।", "good");
+    }
+    draw();
+  }
+  $("#rp-a").addEventListener("input", function(e){ st.a = +e.target.value; reset(); });
+  goBtn.addEventListener("click", function(){
+    if (st.moving || st.top) return;
+    st.moving = true; goBtn.disabled = true;
+    setStatus(statusEl, "ঠেলে তোলা হচ্ছে…");
+  });
+  $("#rp-reset").addEventListener("click", reset);
+  reset();
+  return { tick: tick };
+})();
+
+/* =================== 5. GRAVITY =================== */
+sims.gravity = (function(){
+  var svg = $("#gv-svg"), TOPY = 80, GY = 400, PXM = (GY - TOPY) / 2;
+  var OBJ = [
+    { id: "ball",    name: "ফুটবল",           k: 0.015 },
+    { id: "pencil",  name: "পেনসিল",          k: 0.01 },
+    { id: "eraser",  name: "ইরেজার",          k: 0.01 },
+    { id: "crumple", name: "দলা পাকানো কাগজ", k: 0.12 },
+    { id: "paper",   name: "খোলা কাগজ",       k: 2.2, sway: 22 },
+    { id: "feather", name: "পালক",            k: 5,   sway: 30 }
+  ];
+  var cols = [ { x: 300, o: "ball" }, { x: 560, o: "paper" } ];
+  var st = { running: false };
+
+  S("rect", { x: 0, y: 0, width: 800, height: GY, fill: "var(--sky)" }, svg);
+  S("rect", { x: 0, y: GY, width: 800, height: 60, fill: "var(--ground)" }, svg);
+  for (var i = 0; i < 120; i++) S("path", { d: "M" + (i * 6.7) + " " + GY + " l3 -9 l3 9", fill: "var(--ground2)" }, svg);
+  // height ruler
+  S("line", { x1: 120, y1: TOPY, x2: 120, y2: GY, stroke: "var(--ink)", "stroke-width": 2 }, svg);
+  [0, 0.5, 1, 1.5, 2].forEach(function(h){
+    var y = GY - h * PXM;
+    S("line", { x1: 112, y1: y, x2: 128, y2: y, stroke: "var(--ink)", "stroke-width": 2 }, svg);
+    var t = S("text", { x: 104, y: y + 5, "text-anchor": "end", "font-size": 14, fill: "var(--ink)" }, svg); t.textContent = bn(h, h % 1 ? 1 : 0) + " মি";
+  });
+  S("line", { x1: 180, y1: TOPY, x2: 700, y2: TOPY, stroke: "var(--muted)", "stroke-width": 2, "stroke-dasharray": "6 6" }, svg);
+  var tl = S("text", { x: 700, y: TOPY - 10, "text-anchor": "end", "font-size": 14, fill: "var(--muted)" }, svg); tl.textContent = "ছাড়ার জায়গা";
+  // earth pull arrow
+  S("path", { d: vArrowPath(740, 150, 330, 14), fill: "var(--teal)" }, svg);
+  var et = S("text", { x: 740, y: 136, "text-anchor": "middle", "font-size": 14, "font-weight": 700, fill: "var(--teal)" }, svg); et.textContent = "পৃথিবীর টান";
+
+  function drawObj(g, id){
+    while (g.firstChild) g.removeChild(g.firstChild);
+    if (id === "ball"){ S("circle", { r: 20, fill: "#FFFFFF", stroke: "#1F3A5F", "stroke-width": 2 }, g); S("polygon", { points: "0,-8 8,-2 5,7 -5,7 -8,-2", fill: "#1F3A5F" }, g); }
+    else if (id === "pencil"){ S("rect", { x: -32, y: -5, width: 54, height: 10, fill: "#FFC43D", stroke: "#B8860B" }, g); S("polygon", { points: "22,-5 34,0 22,5", fill: "#E9C9A0" }, g); S("rect", { x: -38, y: -5, width: 7, height: 10, fill: "#E5487F" }, g); }
+    else if (id === "eraser"){ S("rect", { x: -18, y: -9, width: 36, height: 18, rx: 4, fill: "#E5487F" }, g); S("rect", { x: -18, y: -9, width: 14, height: 18, rx: 4, fill: "#3A86FF" }, g); }
+    else if (id === "crumple"){ S("path", { d: "M-14 -6 L-6 -15 L6 -12 L15 -4 L12 9 L2 15 L-10 12 L-15 3 Z", fill: "#F4F4F4", stroke: "#8A97A8", "stroke-width": 1.5 }, g); S("path", { d: "M-6 -6 L4 2 M-2 8 L8 -4", stroke: "#B0BAC6", "stroke-width": 1.2 }, g); }
+    else if (id === "paper"){ S("rect", { x: -30, y: -3, width: 60, height: 6, fill: "#FFFFFF", stroke: "#8A97A8", "stroke-width": 1.5 }, g); }
+    else { S("path", { d: "M-26 6 Q-4 -18 28 -6 Q4 10 -26 6 Z", fill: "#F5F0E6", stroke: "#B9A98A", "stroke-width": 1.5 }, g); S("line", { x1: -30, y1: 8, x2: 26, y2: -5, stroke: "#9C8A6A", "stroke-width": 1.5 }, g); }
+  }
+  function objOf(id){ for (var j = 0; j < OBJ.length; j++) if (OBJ[j].id === id) return OBJ[j]; return OBJ[0]; }
+  cols.forEach(function(c, idx){
+    c.hand = S("g", null, svg);
+    S("ellipse", { cx: c.x, cy: TOPY - 34, rx: 20, ry: 14, fill: "var(--skin)" }, c.hand);
+    S("rect", { x: c.x - 8, y: TOPY - 80, width: 16, height: 40, rx: 6, fill: "var(--skin)" }, c.hand);
+    c.g = S("g", null, svg);
+    c.label = S("text", { x: c.x, y: GY + 36, "text-anchor": "middle", "font-size": 16, "font-weight": 700, fill: "var(--ink)" }, svg);
+    var sel = $("#gv-o" + (idx + 1));
+    OBJ.forEach(function(o){ var op = document.createElement("option"); op.value = o.id; op.textContent = o.name; sel.appendChild(op); });
+    sel.value = c.o;
+    sel.addEventListener("change", function(){ c.o = sel.value; reset(); });
+  });
+  var statusEl = $("#gv-status"), dropBtn = $("#gv-drop");
+
+  function place(c){
+    var o = objOf(c.o), xoff = o.sway ? o.sway * Math.sin(c.t * 4.2) : 0;
+    var rot = o.sway ? 18 * Math.sin(c.t * 4.2 + 1) : (c.o === "pencil" ? c.t * 120 : 0);
+    var HALF = { ball: 20, pencil: 6, eraser: 9, crumple: 15, paper: 4, feather: 9 };
+    var y = TOPY + c.y * PXM - (HALF[c.o] || 10) * c.y / 2;
+    c.g.setAttribute("transform", "translate(" + (c.x + xoff) + "," + y + ") rotate(" + rot.toFixed(1) + ")");
+  }
+  function show(){
+    cols.forEach(function(c, idx){
+      place(c);
+      c.label.textContent = objOf(c.o).name;
+      $("#gv-n" + (idx + 1)).textContent = objOf(c.o).name;
+      $("#gv-t" + (idx + 1)).textContent = bn(c.t, 2) + " সেকেন্ড";
+    });
+  }
+  function reset(){
+    st.running = false; dropBtn.disabled = false;
+    cols.forEach(function(c){ c.y = 0; c.v = 0; c.t = 0; c.landed = false; drawObj(c.g, c.o); c.hand.style.opacity = 1; });
+    show();
+    setStatus(statusEl, "“একসাথে ছেড়ে দাও” চাপো।");
+  }
+  function tick(dt){
+    if (!st.running) return;
+    if ($("#gv-slow").checked) dt *= 0.25;
+    var allDone = true;
+    cols.forEach(function(c){
+      if (c.landed) return;
+      allDone = false;
+      var o = objOf(c.o);
+      var steps = 4, h = dt / steps;
+      for (var s = 0; s < steps && !c.landed; s++){
+        c.v += (9.8 - o.k * c.v * c.v) * h;
+        c.y += c.v * h; c.t += h;
+        if (c.y >= 2){ c.y = 2; c.landed = true; }
+      }
+    });
+    var done = cols.every(function(c){ return c.landed; });
+    show();
+    if (done && !allDone){
+      st.running = false;
+      var a = cols[0], b = cols[1], A = objOf(a.o).name, B = objOf(b.o).name, diff = Math.abs(a.t - b.t);
+      var msg = "দুটোই নিচে পড়েছে, কারণ পৃথিবী সবকিছুকে নিচের দিকে টানে। ";
+      if (a.o === b.o || diff < 0.05) msg += "দুটো প্রায় একসাথে মাটিতে পৌঁছেছে!";
+      else msg += (a.t < b.t ? A : B) + " আগে পড়েছে। " + (a.t < b.t ? B : A) + " বাতাসে বেশি বাধা পেয়েছে, তাই ধীরে নেমেছে।";
+      setStatus(statusEl, msg, "good");
+    }
+  }
+  dropBtn.addEventListener("click", function(){
+    if (st.running) return;
+    if (cols.some(function(c){ return c.landed; })) reset();
+    st.running = true; dropBtn.disabled = true;
+    cols.forEach(function(c){ c.hand.style.opacity = 0.35; });
+    setStatus(statusEl, "পড়ছে…");
+  });
+  $("#gv-reset").addEventListener("click", reset);
+  reset();
+  return { tick: tick };
+})();
+
+/* =================== 6. PULLEY =================== */
+sims.pulley = (function(){
+  var svg = $("#pl-svg"), GY = 300, WATER = 420, BOTTOM_Y = 410, TOP_Y = 150, LIFT_M = 3, WGT = 80;
+  var st = { mode: 1, p: 0, auto: 0 };
+  S("rect", { x: 0, y: 0, width: 800, height: GY, fill: "var(--sky)" }, svg);
+  S("rect", { x: 0, y: GY, width: 800, height: 160, fill: "var(--soil)" }, svg);
+  S("rect", { x: 150, y: GY, width: 140, height: 160, fill: "#3D4E63" }, svg);
+  S("rect", { x: 150, y: WATER, width: 140, height: 40, fill: "var(--water)" }, svg);
+  S("rect", { x: 130, y: GY - 34, width: 20, height: 194, fill: "var(--stone)" }, svg);
+  S("rect", { x: 290, y: GY - 34, width: 20, height: 194, fill: "var(--stone)" }, svg);
+  S("rect", { x: 128, y: GY - 40, width: 24, height: 10, fill: "#5D6675" }, svg);
+  S("rect", { x: 288, y: GY - 40, width: 24, height: 10, fill: "#5D6675" }, svg);
+  var frame = S("g", null, svg);
+  S("rect", { x: 136, y: 50, width: 10, height: GY - 90, fill: "var(--wood2)" }, frame);
+  S("rect", { x: 294, y: 50, width: 10, height: GY - 90, fill: "var(--wood2)" }, frame);
+  S("rect", { x: 126, y: 44, width: 188, height: 12, rx: 3, fill: "var(--wood)" }, frame);
+  var rope = S("polyline", { fill: "none", stroke: "var(--rope)", "stroke-width": 4, "stroke-linejoin": "round", "stroke-linecap": "round" }, svg);
+  var wheel1 = S("g", null, svg);
+  S("circle", { cx: 0, cy: 0, r: 18, fill: "var(--blue)", stroke: "var(--navy)", "stroke-width": 3 }, wheel1);
+  S("circle", { cx: 0, cy: 0, r: 4, fill: "var(--navy)" }, wheel1);
+  var hang1 = S("line", { stroke: "var(--navy)", "stroke-width": 3 }, svg);
+  var bucket = S("g", null, svg);
+  S("path", { d: "M-24 -30 L24 -30 L18 10 L-18 10 Z", fill: "var(--orange)", stroke: "#9C3F12", "stroke-width": 2 }, bucket);
+  S("path", { d: "M-24 -30 Q0 -62 24 -30", fill: "none", stroke: "#5D6675", "stroke-width": 3 }, bucket);
+  var wheel2 = S("g", null, bucket);
+  S("circle", { cx: 0, cy: -62, r: 15, fill: "var(--pink)", stroke: "var(--navy)", "stroke-width": 3 }, wheel2);
+  S("circle", { cx: 0, cy: -62, r: 4, fill: "var(--navy)" }, wheel2);
+  S("line", { x1: 0, y1: -47, x2: 0, y2: -40, stroke: "var(--navy)", "stroke-width": 3 }, wheel2);
+  var person = kid(svg, "var(--purple)", 0, [0, 0]);
+  var pullArrow = S("path", { fill: "var(--purple)" }, svg);
+  var pullTxt = S("text", { "text-anchor": "middle", "font-size": 15, "font-weight": 700, fill: "var(--purple)" }, svg);
+  var statusEl = $("#pl-status"), slider = $("#pl-pull");
+
+  function bucketY(){ return BOTTOM_Y - (BOTTOM_Y - TOP_Y) * st.p / 100; }
+  function draw(){
+    var by = bucketY(), bx = 220, handle = by - 46;
+    bucket.setAttribute("transform", "translate(" + bx + "," + by + ")");
+    wheel2.style.display = st.mode === 2 ? "" : "none";
+    var px = 440, hands, pts;
+    if (st.mode === 0){
+      frame.style.display = "none"; wheel1.style.display = "none"; hang1.style.display = "none";
+      px = 340;
+      hands = [px - 28, GY - 84];
+      pts = handle < GY - 110 ? [[bx, handle], [hands[0], hands[1]]] : [[bx, handle], [bx, GY - 110], [hands[0], hands[1]]];
+      person.setAttribute("transform", "translate(" + px + "," + GY + ")");
+      pullArrow.setAttribute("d", vArrowPath(px + 40, GY - 70, GY - 150, 10));
+      pullTxt.setAttribute("x", px + 40); pullTxt.setAttribute("y", GY - 160); pullTxt.textContent = "উপরে টানো";
+    } else {
+      frame.style.display = ""; wheel1.style.display = ""; hang1.style.display = "";
+      var wx = st.mode === 2 ? 250 : 220;
+      wheel1.setAttribute("transform", "translate(" + wx + ",80)");
+      hang1.setAttribute("x1", wx); hang1.setAttribute("y1", 56); hang1.setAttribute("x2", wx); hang1.setAttribute("y2", 76);
+      hands = [px - 22, GY - 50];
+      person.setAttribute("transform", "translate(" + px + "," + GY + ")");
+      if (st.mode === 1){
+        pts = [[bx, handle], [wx - 18, 80]];
+        for (var a = 180; a >= 0; a -= 20){ var r = a * Math.PI / 180; pts.push([wx + 18 * Math.cos(r), 80 - 18 * Math.sin(r)]); }
+        pts.push([hands[0], hands[1]]);
+      } else {
+        var my = by - 62;
+        pts = [[bx - 15, 56], [bx - 15, my]];
+        for (var b = 180; b <= 360; b += 20){ var rr = b * Math.PI / 180; pts.push([bx + 15 * Math.cos(rr), my - 15 * Math.sin(rr)]); }
+        pts.push([wx - 18, 80]);
+        for (var c2 = 180; c2 >= 0; c2 -= 20){ var r2 = c2 * Math.PI / 180; pts.push([wx + 18 * Math.cos(r2), 80 - 18 * Math.sin(r2)]); }
+        pts.push([hands[0], hands[1]]);
+      }
+      pullArrow.setAttribute("d", vArrowPath(px + 46, GY - 150, GY - 70, st.mode === 2 ? 7 : 12));
+      pullTxt.setAttribute("x", px + 46); pullTxt.setAttribute("y", GY - 160); pullTxt.textContent = "নিচে টানো";
+    }
+    person.arm.setAttribute("x2", hands[0] - (st.mode === 0 ? 340 : 440));
+    person.arm.setAttribute("y2", hands[1] - GY);
+    rope.setAttribute("points", pts.map(function(p){ return p[0].toFixed(1) + "," + p[1].toFixed(1); }).join(" "));
+    var h = LIFT_M * st.p / 100, ropeLen = st.mode === 2 ? 2 * h : h, F = st.mode === 2 ? WGT / 2 : WGT;
+    $("#pl-f").textContent = bn(F) + " একক " + (st.mode === 0 ? "(উপরে)" : "(নিচে)");
+    $("#pl-rope").textContent = bn(ropeLen, 1) + " মিটার";
+    $("#pl-h").textContent = bn(h, 1) + " মিটার";
+    var msg;
+    if (st.mode === 0) msg = "কপিকল ছাড়া উপরের দিকে টানতে হয়, কুয়ার ধারে ঝুঁকে দাঁড়াতে হয়। কষ্ট বেশি!";
+    else if (st.mode === 1) msg = "এক চাকায় বল একই (" + bn(WGT) + "), কিন্তু নিচের দিকে টানা যায়, শরীরের ভারও কাজে লাগে।";
+    else msg = "দুই চাকায় বল অর্ধেক (" + bn(WGT / 2) + ")! কিন্তু বালতি ১ মিটার তুলতে ২ মিটার দড়ি টানতে হয়।";
+    if (st.p >= 100) msg = "বালতি উঠে এসেছে! " + msg;
+    setStatus(statusEl, msg, st.p >= 100 ? "good" : "");
+  }
+  function tick(dt){
+    if (!st.auto) return;
+    st.p = clamp(st.p + st.auto * dt * 18, 0, 100);
+    if (st.p === 0 || st.p === 100) st.auto = 0;
+    slider.value = Math.round(st.p);
+    draw();
+  }
+  document.querySelectorAll("#pl-mode button").forEach(function(btn){
+    btn.addEventListener("click", function(){ st.mode = +btn.getAttribute("data-m"); setPressed($("#pl-mode"), btn); st.p = 0; st.auto = 0; slider.value = 0; draw(); });
+  });
+  slider.addEventListener("input", function(){ st.auto = 0; st.p = +slider.value; draw(); });
+  $("#pl-go").addEventListener("click", function(){ st.auto = 1; });
+  $("#pl-down").addEventListener("click", function(){ st.auto = -1; });
+  draw();
+  return { tick: tick };
+})();
+
+/* =================== reveal answers =================== */
+document.querySelectorAll(".think .reveal").forEach(function(btn){
+  btn.addEventListener("click", function(){
+    var ans = btn.parentNode.querySelector(".ans");
+    ans.hidden = !ans.hidden;
+    btn.textContent = ans.hidden ? "উত্তর দেখো" : "উত্তর লুকাও";
+  });
+});
+
+/* =================== routing =================== */
+var VIEWS = ["tug", "friction", "lever", "ramp", "gravity", "pulley"], active = "tug";
+function show(view){
+  if (VIEWS.indexOf(view) < 0) view = "tug";
+  active = view;
+  document.querySelectorAll(".sim").forEach(function(s){ s.classList.toggle("active", s.id === "sim-" + view); });
+  document.querySelectorAll("nav.tabs button").forEach(function(b){
+    var on = b.getAttribute("data-view") === view;
+    b.setAttribute("aria-selected", on ? "true" : "false");
+    b.tabIndex = on ? 0 : -1;
+    if (on){ var nav = b.parentNode; nav.scrollLeft = Math.max(0, b.offsetLeft - nav.offsetLeft - 16); }
+  });
+}
+document.querySelectorAll("nav.tabs button").forEach(function(b){
+  b.addEventListener("click", function(){
+    var v = b.getAttribute("data-view");
+    if (location.hash !== "#" + v) location.hash = v; else show(v);
+  });
+});
+window.addEventListener("hashchange", function(){ show(location.hash.slice(1)); });
+show(location.hash.slice(1));
+
+/* =================== loop =================== */
+var last = performance.now();
+function loop(now){
+  var dt = Math.min(0.05, Math.max(0, (now - last) / 1000)); last = now;
+  try { if (sims[active] && sims[active].tick) sims[active].tick(dt); } catch (err) { console.error(err); }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
